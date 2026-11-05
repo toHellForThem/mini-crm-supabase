@@ -42,21 +42,33 @@ supabase db push
 
 ### 4. Создайте пользователей
 
-Откройте **Authentication → Users → Add user** и создайте минимум трёх пользователей:
+Откройте **Authentication → Users → Add user** и создайте минимум трёх пользователей. В диалоге создания достаточно email и пароля — поля метаданных там нет.
 
-| Email | Пароль | User Metadata (JSON) |
-|---|---|---|
-| manager@example.com | password123 | `{"role":"manager","full_name":"Иван Петров"}` |
-| executor1@example.com | password123 | `{"role":"executor","full_name":"Алексей Смирнов"}` |
-| executor2@example.com | password123 | `{"role":"executor","full_name":"Мария Кузнецова"}` |
+| Email | Пароль |
+|---|---|
+| manager@example.com | password123 |
+| executor1@example.com | password123 |
+| executor2@example.com | password123 |
 
-Поле **User Metadata** соответствует `raw_user_meta_data`. Триггер `handle_new_user` автоматически создаст запись в `public.profiles`, взяв оттуда `role` и `full_name`. Если метаданные не указаны, роль по умолчанию — `executor`; её можно поправить вручную:
+После создания всех пользователей выполните в **SQL Editor** запрос, который проставит роли и имена:
 
 ```sql
 update public.profiles
 set role = 'manager', full_name = 'Иван Петров'
 where email = 'manager@example.com';
+
+update public.profiles
+set role = 'executor', full_name = 'Алексей Смирнов'
+where email = 'executor1@example.com';
+
+update public.profiles
+set role = 'executor', full_name = 'Мария Кузнецова'
+where email = 'executor2@example.com';
+
+select email, role, full_name from public.profiles order by created_at;
 ```
+
+Триггер `handle_new_user` уже создал записи в `public.profiles` при регистрации пользователей, поэтому `update` просто дополняет их. Если `seed.sql` вывел `Need at least 1 manager and 2 executors`, значит роли ещё не проставлены — выполните запрос выше и запустите `seed.sql` заново.
 
 > Открытая регистрация отключена: пользователи создаются только вручную в Supabase.
 
@@ -85,10 +97,15 @@ VITE_SUPABASE_ANON_KEY=<your-anon-public-key>
 
 ```bash
 npm install
-npm run dev
+npm run dev -- --host 0.0.0.0
 ```
 
 Приложение откроется на `http://localhost:5173`.
+
+> Флаг `--host 0.0.0.0` нужен, если вы работаете в WSL, Docker или на удалённой машине: без него Vite может привязаться только к IPv6 `::1`, и браузер не сможет подключиться. Альтернатива — добавить в [`vite.config.ts`](vite.config.ts):
+> ```ts
+> server: { host: '0.0.0.0', port: 5173 }
+> ```
 
 ### 8. Сборка
 
