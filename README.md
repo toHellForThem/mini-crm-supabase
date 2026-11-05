@@ -4,7 +4,7 @@
 
 ## Демо
 
-- **Приложение:** `<вставьте ссылку на Vercel>`
+- **Приложение:** `https://mini-crm-supabase-iz5nnut6k-tohellforthem.vercel.app`
 - **Постановщик:** `manager@example.com` / `password123`
 - **Исполнитель 1:** `executor1@example.com` / `password123`
 - **Исполнитель 2:** `executor2@example.com` / `password123`
