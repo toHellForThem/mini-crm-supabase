@@ -1,48 +1,26 @@
 # Mini-CRM «Объекты и задачи»
 
-Небольшая CRM для строительной компании: постановщик ставит задачи по объектам, исполнители берут их в работу, отправляют на проверку, постановщик принимает или возвращает на доработку. Все переходы статусов и права доступа проверяются на уровне базы данных (PostgreSQL + RLS), а не только в интерфейсе.
+Небольшая CRM для строительной компании: постановщик ставит задачи по объектам, исполнители берут их в работу и отправляют на проверку. Права и переходы статусов проверяются на уровне PostgreSQL (RLS + RPC), а не только в интерфейсе.
+
+## Демо
+
+- **Приложение:** `<вставьте ссылку на Vercel>`
+- **Постановщик:** `manager@example.com` / `password123`
+- **Исполнитель 1:** `executor1@example.com` / `password123`
+- **Исполнитель 2:** `executor2@example.com` / `password123`
 
 ## Стек
 
-- React 18 + TypeScript + Vite
-- Tailwind CSS
-- TanStack Query (React Query)
-- React Router
-- Supabase (Auth, PostgreSQL, Row Level Security)
-
-## Требования
-
-- Node.js 18+
-- Аккаунт Supabase (бесплатный тариф подходит)
+React 18 + TypeScript + Vite, Tailwind CSS, TanStack Query, React Router, Supabase (Auth, PostgreSQL, RLS).
 
 ## Запуск
 
-### 1. Создайте проект в Supabase
+### 1. Supabase
 
-1. Зайдите на [supabase.com](https://supabase.com) и создайте новый проект.
-2. Дождитесь окончания инициализации базы.
-
-### 2. Примените миграцию
-
-**Вариант A — через SQL Editor (проще):**
-
-1. Откройте в проекте Supabase: **SQL Editor → New query**.
-2. Скопируйте содержимое файла [`supabase/migrations/20260101000000_init.sql`](supabase/migrations/20260101000000_init.sql) и нажмите **Run**.
-
-**Вариант B — через Supabase CLI:**
-
-```bash
-supabase link --project-ref <your-project-ref>
-supabase db push
-```
-
-### 3. Отключите открытую регистрацию
-
-В Supabase откройте **Authentication → Providers → Email** и выключите **Allow new users to sign up**. Пользователи будут создаваться только вручную администратором.
-
-### 4. Создайте пользователей
-
-Откройте **Authentication → Users → Add user** и создайте минимум трёх пользователей. В диалоге создания достаточно email и пароля — поля метаданных там нет.
+1. Создайте проект на [supabase.com](https://supabase.com).
+2. В **SQL Editor** выполните [`supabase/migrations/20260101000000_init.sql`](supabase/migrations/20260101000000_init.sql).
+3. В **Authentication → Providers → Email** выключите **Allow new users to sign up**.
+4. В **Authentication → Users → Add user** создайте трёх пользователей:
 
 | Email | Пароль |
 |---|---|
@@ -50,97 +28,73 @@ supabase db push
 | executor1@example.com | password123 |
 | executor2@example.com | password123 |
 
-После создания всех пользователей выполните в **SQL Editor** запрос, который проставит роли и имена:
+5. В **SQL Editor** проставьте роли и имена:
 
 ```sql
-update public.profiles
-set role = 'manager', full_name = 'Иван Петров'
-where email = 'manager@example.com';
-
-update public.profiles
-set role = 'executor', full_name = 'Алексей Смирнов'
-where email = 'executor1@example.com';
-
-update public.profiles
-set role = 'executor', full_name = 'Мария Кузнецова'
-where email = 'executor2@example.com';
-
-select email, role, full_name from public.profiles order by created_at;
+update public.profiles set role = 'manager', full_name = 'Иван Петров' where email = 'manager@example.com';
+update public.profiles set role = 'executor', full_name = 'Алексей Смирнов' where email = 'executor1@example.com';
+update public.profiles set role = 'executor', full_name = 'Мария Кузнецова' where email = 'executor2@example.com';
 ```
 
-Триггер `handle_new_user` уже создал записи в `public.profiles` при регистрации пользователей, поэтому `update` просто дополняет их. Если `seed.sql` вывел `Need at least 1 manager and 2 executors`, значит роли ещё не проставлены — выполните запрос выше и запустите `seed.sql` заново.
+6. (Необязательно) Выполните [`supabase/seed.sql`](supabase/seed.sql) — создаст 3 объекта, 5 задач и историю.
 
-> Открытая регистрация отключена: пользователи создаются только вручную в Supabase.
-
-### 5. (Необязательно) Заполните демо-данными
-
-Выполните в SQL Editor файл [`supabase/seed.sql`](supabase/seed.sql). Скрипт найдёт первого менеджера и двух исполнителей, создаст 3 объекта и 5 задач в разных статусах с историей.
-
-### 6. Настройте `.env`
+### 2. Локальный запуск
 
 ```bash
 cp .env.example .env
-```
-
-Заполните:
-
-```
-VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<your-anon-public-key>
-```
-
-Оба значения лежат в Supabase: **Settings → API**.
-
-> В репозиторий и во фронтенд попадает только `anon` (публичный) ключ. `service_role` и пароль базы **не используются** и не должны попадать в `.env` или в код.
-
-### 7. Запустите приложение
-
-```bash
+# заполните VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY (Settings → API)
 npm install
 npm run dev -- --host 0.0.0.0
 ```
 
-Приложение откроется на `http://localhost:5173`.
+Откройте `http://localhost:5173`.
 
-> Флаг `--host 0.0.0.0` нужен, если вы работаете в WSL, Docker или на удалённой машине: без него Vite может привязаться только к IPv6 `::1`, и браузер не сможет подключиться. Альтернатива — добавить в [`vite.config.ts`](vite.config.ts):
-> ```ts
-> server: { host: '0.0.0.0', port: 5173 }
-> ```
+> Флаг `--host 0.0.0.0` нужен в WSL/Docker/на удалённой машине: без него Vite может привязаться только к IPv6 `::1`, и браузер не подключится.
 
-### 8. Сборка
+### 3. Сборка
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Деплой на Vercel
+## Деплой
 
-1. Импортируйте репозиторий в Vercel.
-2. В **Settings → Environment Variables** добавьте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`.
-3. Deploy. Framework preset определится как Vite автоматически.
+Vercel или Netlify. В настройках проекта укажите:
 
-## Роли и доступ
+- Build command: `npm run build`
+- Output directory: `dist`
+- Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
-- **Постановщик (manager)** — создаёт/редактирует/удаляет объекты и задачи, назначает исполнителя, принимает задачи и возвращает на доработку, видит все объекты и задачи.
-- **Исполнитель (executor)** — видит только свои задачи и объекты, в которых у него есть задачи; берёт задачу в работу и отправляет на проверку.
+Для Netlify уже есть [`netlify.toml`](netlify.toml) с SPA-редиректом.
 
-## Статусы и переходы
+## Роли и статусы
+
+- **Постановщик** — создаёт/редактирует/удаляет объекты и задачи, назначает исполнителя, принимает и возвращает на доработку, видит всё.
+- **Исполнитель** — видит только свои задачи и объекты с ними, берёт в работу и отправляет на проверку.
 
 | Из | В | Кто | Условие |
 |---|---|---|---|
 | — | Новая | постановщик | при создании |
-| Новая | В работе | назначенный исполнитель | — |
-| В работе | На проверке | назначенный исполнитель | — |
+| Новая | В работе | исполнитель | — |
+| В работе | На проверке | исполнитель | — |
 | На проверке | Принята | постановщик | — |
 | На проверке | На доработке | постановщик | комментарий обязателен |
-| На доработке | В работе | назначенный исполнитель | — |
+| На доработке | В работе | исполнитель | — |
 
-Переходы реализованы в SQL-функции `update_task_status()`. Прямое изменение поля `status` через API блокируется триггером.
+## Безопасность
 
-## Проверка безопасности (SQL-тесты)
+- RLS на всех таблицах: исполнитель не видит чужие задачи даже через прямой API.
+- Смена статуса — только через `update_task_status()`; прямой `UPDATE status` блокируется триггером.
+- История статусов append-only: `INSERT/UPDATE/DELETE` отозваны у `authenticated` и `anon`.
+- Открытая регистрация отключена.
+- `service_role` не используется во фронтенде.
 
-В репозитории есть SQL-тесты, которые проверяют RLS и переходы статусов на обычном PostgreSQL (эмуляция Supabase через [`tests/sql/harness.sql`](tests/sql/harness.sql)):
+Подробнее: [`docs/explanation.md`](docs/explanation.md) и [`docs/decisions.md`](docs/decisions.md).
+
+## Тесты
+
+SQL-тесты RLS и переходов:
 
 ```bash
 docker rm -f crm-pg 2>/dev/null
@@ -152,32 +106,3 @@ docker exec -i crm-pg psql -U postgres -v ON_ERROR_STOP=1 < tests/sql/rls_test.s
 ```
 
 Ожидаемый результат: `ALL RLS AND TRANSITION TESTS PASSED`.
-
-## Безопасность
-
-Подробно описано в [`docs/explanation.md`](docs/explanation.md). Кратко:
-
-- **RLS включён на всех таблицах.** Исполнитель не может прочитать или изменить чужую задачу даже через прямой запрос к Supabase.
-- **Смена статуса — только через `security definer` RPC `update_task_status()`.** Функция проверяет роль, владельца задачи и допустимость перехода; запрещённый переход выбрасывает исключение.
-- **Прямое изменение `status` запрещено триггером** `prevent_direct_status_change`.
-- **История неизменяема:** `INSERT/UPDATE/DELETE` на `task_history` отозваны у ролей `authenticated` и `anon`; записи создаются только триггерами и RPC.
-- **Новые задачи всегда создаются в статусе `new`** (триггер `force_new_task_status`).
-- **Открытая регистрация отключена** — пользователи создаются вручную.
-
-## Структура проекта
-
-```
-supabase/
-  migrations/20260101000000_init.sql   # схема, RLS, триггеры, RPC
-  seed.sql                             # демо-данные
-src/
-  components/                          # Layout, ProtectedRoute, StatusBadge
-  contexts/AuthContext.tsx             # сессия и профиль
-  hooks/                               # React Query хуки
-  lib/                                 # supabase client, типы, утилиты
-  pages/                               # экраны
-docs/explanation.md                    # объяснение для руководителя
-docs/decisions.md                      # решения и допущения
-tests/sql/harness.sql                  # эмуляция Supabase для SQL-тестов
-tests/sql/rls_test.sql                 # тесты RLS и переходов статусов
-```
